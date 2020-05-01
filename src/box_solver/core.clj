@@ -1,4 +1,5 @@
-(ns box-solver.core)
+(ns box-solver.core
+  (:gen-class))
 
 (defn coords [x s width]
   (let [index (.indexOf s (str x))]
@@ -91,7 +92,6 @@
           (update :seen conj (hash world'))))))
 (defmethod move \1 [d state] (do
                                (println "Direction:" d)
-                               (clojure.pprint/pprint state)
                                (throw (Exception. "illegal state?"))))
 (defmethod move :default [_ _] nil)
 
@@ -111,6 +111,23 @@
   (first (drop-while (complement won?)
                      (bfs (conj clojure.lang.PersistentQueue/EMPTY state)))))
 
+(def levels
+  {7 {:width 10
+      :height 13
+      :level (str "xxxxxxxxxx"
+                  "xxxg    *x"
+                  "xxx x xcxx"
+                  "x    c c x"
+                  "x x x x xx"
+                  "x    c  *x"
+                  "xccxxxxxxx"
+                  "x  *xxxxxx"
+                  "x   xxxxxx"
+                  "x x c xxxx"
+                  "x1r ccxexx"
+                  "x   c R Gx"
+                  "xxxxxxxxxx")}})
+
 (def level {:width 6
             :height 7
             :level (str "xxexxx"
@@ -121,4 +138,5 @@
                         "x   *x"
                         "xxxxxx")})
 
-(time (clojure.pprint/pprint (solve (make-state level))))
+(defn -main []
+  (time (println (solve (make-state (levels 7))))))
