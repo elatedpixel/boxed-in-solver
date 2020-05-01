@@ -1,25 +1,6 @@
 (ns box-solver.core
+  (:require [box-solver.data :as d])
   (:gen-class))
-
-(defn coords [x s width]
-  (let [index (.indexOf s (str x))]
-    (vector (quot index width) (rem index width))))
-
-(defrecord State [robot world origin switches gears? exited? seen steps])
-(defn make-state [{:keys [width height level]}]
-  (let [robot (coords \1 level width)
-        world (mapv vec (partition width level))]
-    (->State robot
-             world
-             (->> level
-                  (replace (zipmap "1c" (repeat \space)))
-                  (partition width)
-                  (mapv vec))
-             (zipmap "RGBY" (map #(coords % level width) "RGBY"))
-             (.contains level "*")
-             false
-             #{(hash world)}
-             [])))
 
 (def switch
   (zipmap "rbgy" "RBGY"))
@@ -40,18 +21,18 @@
   (fn [d state] (get-in (:world state) (target d state))))
 (defmethod move \space [d {:keys [robot world origin seen] :as state}]
   (let [world' (-> world
-                   (assoc-in (target d state) \1)
+                   (assoc-in (target d state) \p)
                    (assoc-in robot (get-in origin robot)))]
     (when (not (seen (hash world')))
       (-> state
           (assoc-in [:robot] (target d state))
-          (assoc-in (cons :world (target d state)) \1)
+          (assoc-in (cons :world (target d state)) \p)
           (assoc-in (cons :world robot) (get-in origin robot))
           (update :steps conj d)
           (update :seen conj (hash world'))))))
-(defmethod move \e [d {:keys [robot world origin seen] :as state}]
+(defmethod move \@ [d {:keys [robot world origin seen] :as state}]
   (let [world' (-> world
-                   (assoc-in (target d state) \1)
+                   (assoc-in (target d state) \p)
                    (assoc-in robot (get-in origin robot)))]
     (when (not (seen (hash world')))
       (-> state
@@ -60,28 +41,25 @@
           (assoc :world world')
           (update :steps conj d)
           (update :seen conj (hash world'))))))
-(defmethod move \c [d {:keys [robot world origin seen switches] :as state}]
+(defmethod move \+ [d {:keys [robot world origin seen switches] :as state}]
   (let [tt (get-in world (target-of-target d state))
         to (get-in origin (target d state))]
-    (when ((set " rbgye") tt)
-      (let [world' (-> world
-                       (assoc-in (target d state) \1)
-                       (assoc-in (target-of-target d state) \c)
-                       (assoc-in robot (get-in origin robot)))]
+    (when ((set " rbgyp") tt)
+      (let [world' (cond-> world
+                     ((set "rgby") tt) (assoc-in (switches (switch tt)) \space)
+                     ((set "rgby") to) (assoc-in (switches (switch to)) (switch to))
+                     :always (-> (assoc-in (target d state) \p)
+                                 (assoc-in (target-of-target d state) \+)
+                                 (assoc-in robot (get-in origin robot))))]
         (when (not (seen (hash world')))
           (-> state
               (assoc :robot (target d state))
-              (assoc :world
-                     (cond-> world'
-                       ((set "rgby") tt)
-                       (assoc-in (switches (switch tt)) \space)
-                       ((set "rgby") to)
-                       (assoc-in (switches (switch to)) (switch to))))
+              (assoc :world world')
               (update :steps conj d)
               (update :seen conj (hash world'))))))))
 (defmethod move \* [d {:keys [robot world origin seen] :as state}]
   (let [world' (-> world
-                   (assoc-in (target d state) \1)
+                   (assoc-in (target d state) \p)
                    (assoc-in robot (get-in origin robot)))]
     (when (not (seen (hash world')))
       (-> state
@@ -90,7 +68,7 @@
           (assoc :gears? (.contains (apply str (flatten world')) "*"))
           (update :steps conj d)
           (update :seen conj (hash world'))))))
-(defmethod move \1 [d state] (do
+(defmethod move \p [d state] (do
                                (println "Direction:" d)
                                (throw (Exception. "illegal state?"))))
 (defmethod move :default [_ _] nil)
@@ -111,32 +89,8 @@
   (first (drop-while (complement won?)
                      (bfs (conj clojure.lang.PersistentQueue/EMPTY state)))))
 
-(def levels
-  {7 {:width 10
-      :height 13
-      :level (str "xxxxxxxxxx"
-                  "xxxg    *x"
-                  "xxx x xcxx"
-                  "x    c c x"
-                  "x x x x xx"
-                  "x    c  *x"
-                  "xccxxxxxxx"
-                  "x  *xxxxxx"
-                  "x   xxxxxx"
-                  "x x c xxxx"
-                  "x1r ccxexx"
-                  "x   c R Gx"
-                  "xxxxxxxxxx")}})
-
-(def level {:width 6
-            :height 7
-            :level (str "xxexxx"
-                        "xxRxxx"
-                        "xr   x"
-                        "xxx  x"
-                        "x1c  x"
-                        "x   *x"
-                        "xxxxxx")})
-
 (defn -main []
-  (time (println (solve (make-state (levels 7))))))
+  (let [level (d/levels 2)]
+    (time (do
+            (println (solve (d/make-state level)))
+            (d/display level)))))

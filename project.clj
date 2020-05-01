@@ -7,4 +7,5 @@
   :aot :all
   :main box-solver.core
   :jvm-opts ["-Xmx6g" "-XX:MaxMetaspaceSize=1024m"]
+  :resource-paths ["resources"]
   :repl-options {:init-ns box-solver.core})
