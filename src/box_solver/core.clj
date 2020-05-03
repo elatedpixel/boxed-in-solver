@@ -17,61 +17,53 @@
 (defn target-of-target [d {:keys [robot]}]
   (map + robot (direction d) (direction d)))
 
-(defmulti move
-  (fn [d state] (get-in (:world state) (target d state))))
-(defmethod move \space [d {:keys [robot world origin seen] :as state}]
-  (let [world' (-> world
-                   (assoc-in (target d state) \p)
-                   (assoc-in robot (get-in origin robot)))]
-    (when (not (seen (hash world')))
-      (-> state
-          (assoc-in [:robot] (target d state))
-          (assoc-in (cons :world (target d state)) \p)
-          (assoc-in (cons :world robot) (get-in origin robot))
-          (update :steps conj d)
-          (update :seen conj (hash world'))))))
-(defmethod move \@ [d {:keys [robot world origin seen] :as state}]
-  (let [world' (-> world
-                   (assoc-in (target d state) \p)
-                   (assoc-in robot (get-in origin robot)))]
-    (when (not (seen (hash world')))
-      (-> state
-          (assoc :exited? true)
-          (assoc :robot (target d state))
-          (assoc :world world')
-          (update :steps conj d)
-          (update :seen conj (hash world'))))))
-(defmethod move \+ [d {:keys [robot world origin seen switches] :as state}]
-  (let [tt (get-in world (target-of-target d state))
-        to (get-in origin (target d state))]
-    (when ((set " rbgyp") tt)
-      (let [world' (cond-> world
-                     ((set "rgby") tt) (assoc-in (switches (switch tt)) \space)
-                     ((set "rgby") to) (assoc-in (switches (switch to)) (switch to))
-                     :always (-> (assoc-in (target d state) \p)
-                                 (assoc-in (target-of-target d state) \+)
-                                 (assoc-in robot (get-in origin robot))))]
-        (when (not (seen (hash world')))
-          (-> state
-              (assoc :robot (target d state))
-              (assoc :world world')
-              (update :steps conj d)
-              (update :seen conj (hash world'))))))))
-(defmethod move \* [d {:keys [robot world origin seen] :as state}]
-  (let [world' (-> world
-                   (assoc-in (target d state) \p)
-                   (assoc-in robot (get-in origin robot)))]
-    (when (not (seen (hash world')))
-      (-> state
-          (assoc :robot (target d state))
-          (assoc :world world')
-          (assoc :gears? (.contains (apply str (flatten world')) "*"))
-          (update :steps conj d)
-          (update :seen conj (hash world'))))))
-(defmethod move \p [d state] (do
-                               (println "Direction:" d)
-                               (throw (Exception. "illegal state?"))))
-(defmethod move :default [_ _] nil)
+(defn valid-move? [t tt]
+  (or ((set " rgby*@") t)              ; robot moves into position
+      (and (= \+ t)                    ; robot pushes crate
+           ((set " rgby@") tt))))      ; crate moves into valid space
+
+(defn move
+  [d {:keys [robot world origin seen switches] :as state}]
+  (let [t  (get-in world (target d state))
+        ro (get-in origin robot)
+        to (get-in origin (target d state))
+        tt (get-in world (target-of-target d state))]
+    (when (valid-move? t tt)
+      (let [world'
+            (cond-> world
+              (= \+ t)
+              (assoc-in (target-of-target d state) \+)
+
+              (and (= \+ t) ((set "rgby") tt))
+              (assoc-in (switches (switch tt)) \space)
+
+              ((set "rgby") to)
+              (assoc-in (switches (switch to)) (switch to))
+
+              :always
+              (-> (assoc-in (target d state) \p)
+                  (assoc-in robot (get-in origin robot))))
+            hash' (hash world')]
+        (when (not (seen hash'))
+          (cond-> state
+            (= \@ t)
+            (assoc :exited? true)
+
+            (= \@ ro)
+            (assoc :exited? false)
+
+            (= \* t)
+            (assoc :gears? (.contains (apply str (flatten world')) "*"))
+
+            :always
+            (-> (assoc :world world')
+                (assoc :robot (target d state))
+                (update :steps conj d)
+                (update :seen conj hash'))
+                                        ;
+            )
+                                        ;
+          )))))
 
 (defn next-moves [state]
   (keep #(move % state) (keys direction)))
@@ -90,7 +82,9 @@
                      (bfs (conj clojure.lang.PersistentQueue/EMPTY state)))))
 
 (defn -main []
-  (let [level (d/levels 2)]
-    (time (do
-            (println (solve (d/make-state level)))
-            (d/display level)))))
+  (let [level (d/levels 4)]
+    (time (let [solution (solve (d/make-state level))]
+            (do
+              (println solution)
+              (println (count (:steps solution)) "steps.")
+              (d/display level))))))
