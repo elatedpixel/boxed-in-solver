@@ -4,7 +4,7 @@
   (let [index (.indexOf s (str x))]
     (vector (quot index width) (rem index width))))
 
-(defrecord State [robot world origin switches gears? exited? seen steps])
+(defrecord State [robot world origin switches gears? exited? steps])
 (defn make-state [{:keys [width height level]}]
   (let [robot (coords \p level width)
         world (mapv vec (partition width level))]
@@ -17,7 +17,6 @@
              (zipmap "RGBY" (map #(coords % level width) "RGBY"))
              (.contains level "*")
              false
-             #{(hash world)}
              [])))
 
 (def level-regex #"(?<width>\d+)\|(?<height>\d+)\|\d+\|(?<level>[x' BRGY@*+rgpby]+)")
@@ -41,4 +40,4 @@
             {:width  (Integer/parseInt width)
              :height (Integer/parseInt height)
              :level  level}))
-         (zipmap (range)))))
+         (zipmap (rest (range))))))
