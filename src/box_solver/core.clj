@@ -1,5 +1,6 @@
 (ns box-solver.core
-  (:require [box-solver.data :as d])
+  (:require [box-solver.data :as d]
+            [clojure.tools.cli :refer [parse-opts]])
   (:gen-class))
 
 (def switch
@@ -101,12 +102,12 @@
                    (with-timeout timeout (solve (d/make-state level))))]
     solution))
 
-(defn print-solver [n & {:keys [timeout]}]
+(defn print-solver [{:keys [timeout level]}]
   (do
     (println)
-    (println "solving level" n "with" timeout "millisecond timeout.")
-    (d/display (d/levels n))
-    (let [solution (time (solver n :timeout timeout))]
+    (println "solving level" level "with" (or timeout "no") "millisecond timeout.")
+    (d/display (d/levels level))
+    (let [solution (time (solver level :timeout timeout))]
       (println (:steps solution))
       (println (count (:steps solution)) "steps")
       (println)
@@ -117,8 +118,34 @@
                                         ;
   )
 
+(def cli-options
+  ;; An option with a required argument
+  [["-t" "--timeout TIMEOUT" (str "Execution timeout in milliseconds (0-" 0x10000000000 ")")
+    :default nil
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(<= 0 % 0x10000000000) (str "Must be a number between 0 and " 0x10000000000)]]
+   ["-l" "--level LEVEL" "Which level number to solve (1-150)"
+    :default 1
+    :parse-fn #(Integer/parseInt %)
+    :validate [#(< 0 % 151) "Must be a number between 1 and 150"]]
+   ["-h" "--help"]])
+
 (defn -main [& args]
-  (let [timeout (Integer/parseInt (or (System/getenv "TIMEOUT") "30000"))]
-    (doall
-     (for [n (sort (keys d/levels))]
-       (print-solver n timeout)))))
+  (let [{:keys [options arguments summary errors]} (parse-opts args cli-options)]
+    (cond
+      (:help options)
+      (do
+        (println "Boxed-in solver (corona v1.0)")
+        (println "Options:")
+        (println summary))
+
+      errors
+      (do
+        (println "Boxed-in solver (corona v1.0)")
+        (println "Options:")
+        (println summary)
+        (println errors))
+
+      :else
+      (print-solver options))
+    ))
