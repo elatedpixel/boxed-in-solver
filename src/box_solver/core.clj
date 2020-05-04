@@ -22,6 +22,8 @@
       (and (= \+ t)                    ; robot pushes crate
            ((set " rgby@") tt))))      ; crate moves into valid space
 
+(def won? #(= [false true] ((juxt :gears? :exited?) %)))
+
 (defn move
   [d {:keys [robot world origin switches] :as state}]
   (let [t  (get-in world (target d state))
@@ -63,7 +65,7 @@
 
 (def select-values (comp vals select-keys))
 
-(defn seq-graph [data-structure children-fn initial-state]
+(defn seq-graph [data-structure children-fn stop-pred initial-state]
   ((fn walk [explored frontier]
      (lazy-seq
       (when (seq frontier)
@@ -71,8 +73,10 @@
               children (children-fn state)
               hashes (zipmap (map (comp hash :world) children) children)]
           (cons state
-                (walk (into explored (keys hashes))
-                      (into (pop frontier) (select-values hashes (remove explored (keys hashes))))))))))
+                (if-let [winner (some #(when (stop-pred %) %) children)]
+                  (list winner)
+                  (walk (into explored (keys hashes))
+                       (into (pop frontier) (select-values hashes (remove explored (keys hashes)))))))))))
    #{(hash (:world initial-state))} (conj data-structure initial-state)))
 
 (def bfs (partial seq-graph clojure.lang.PersistentQueue/EMPTY))
@@ -80,18 +84,8 @@
 (defn next-moves [state]
   (keep #(move % state) (keys direction)))
 
-#_(defn bfs [queue]
-  (lazy-seq
-   (when (seq queue)
-     (let [state (peek queue)]
-       (cons state
-             (bfs (into (pop queue) (next-moves state))))))))
-
-(def won? #(= [false true] ((juxt :gears? :exited?) %)))
-
 (defn solve [state]
-  (first (drop-while (complement won?)
-                     (bfs next-moves state))))
+  (last (bfs next-moves won? state)))
 
 (defmacro with-timeout [n & body]
   `(let [future# (future ~@body)
@@ -103,8 +97,8 @@
 (defn solver [n & {:keys [timeout]}]
   (let [level    (d/levels n)
         solution (if (nil? timeout)
-                   (time (solve (d/make-state level)))
-                   (with-timeout timeout (time (solve (d/make-state level)))))]
+                   (solve (d/make-state level))
+                   (with-timeout timeout (solve (d/make-state level))))]
     solution))
 
 (defn print-solver [n & {:keys [timeout]}]
@@ -112,14 +106,14 @@
     (println)
     (println "solving level" n "with" timeout "millisecond timeout.")
     (d/display (d/levels n))
-    (let [solution (solver n :timeout timeout)]
+    (let [solution (time (solver n :timeout timeout))]
       (println (:steps solution))
       (println (count (:steps solution)) "steps")
       (println)
       solution)))
 
 (comment
-  (print-solver 5)
+  (print-solver 9 :timeout (* 1000 60 3))
                                         ;
   )
 
