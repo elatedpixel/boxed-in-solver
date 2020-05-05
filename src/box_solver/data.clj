@@ -4,7 +4,7 @@
   (let [index (.indexOf s (str x))]
     (vector (quot index width) (rem index width))))
 
-(defrecord State [robot world origin switches gears? exited? steps])
+(defrecord State [robot world origin hash switches gears? exited? steps])
 (defn make-state [{:keys [width height level]}]
   (let [robot (coords \p level width)
         world (mapv vec (partition width level))]
@@ -14,6 +14,7 @@
                   (replace (zipmap "p+*RBGY" (repeat \space)))
                   (partition width)
                   (mapv vec))
+             (hash world)
              (zipmap "RGBY" (map #(coords % level width) "RGBY"))
              (.contains level "*")
              false
