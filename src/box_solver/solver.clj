@@ -46,7 +46,7 @@
                   (assoc-in robot (get-in origin robot))))
             hash' (hash world')]
         (cond-> state
-          (= \@ t)
+          (= \@ to)
           (assoc :exited? true)
 
           (= \@ ro)
@@ -72,7 +72,7 @@
                   [winner]
                   (walk (into explored (map :hash children))
                         (into (pop frontier) (remove #(explored (:hash %)) children)))))))))
-   #{(hash (:world initial-state))} (conj data-structure initial-state)))
+   #{(:hash initial-state)} (conj data-structure initial-state)))
 
 (def bfs (partial seq-graph clojure.lang.PersistentQueue/EMPTY))
 
