@@ -43,8 +43,7 @@
 
               :always
               (-> (assoc-in (target d state) \p)
-                  (assoc-in robot (get-in origin robot))))
-            hash' (hash world')]
+                  (assoc-in robot (get-in origin robot))))]
         (cond-> state
           (= \@ to)
           (assoc :exited? true)
@@ -61,17 +60,15 @@
               (assoc :robot (target d state))
               (update :steps conj d)))))))
 
-(defn seq-graph [data-structure children-fn stop-pred initial-state]
+(defn seq-graph [data-structure children-fn initial-state]
   ((fn walk [explored frontier]
      (lazy-seq
       (when (seq frontier)
         (let [state    (peek frontier)
               children (children-fn state)]
           (cons state
-                (if-let [winner (some #(when (stop-pred %) %) children)]
-                  [winner]
-                  (walk (into explored (map :hash children))
-                        (into (pop frontier) (remove #(explored (:hash %)) children)))))))))
+                (walk (into explored (map :hash children))
+                      (into (pop frontier) (remove #(explored (:hash %)) children))))))))
    #{(:hash initial-state)} (conj data-structure initial-state)))
 
 (def bfs (partial seq-graph clojure.lang.PersistentQueue/EMPTY))
@@ -80,7 +77,8 @@
   (keep (partial move state) (keys direction)))
 
 (defn solve [state]
-  (last (bfs next-moves won? state)))
+  (first (drop-while (complement won?)
+                     (bfs next-moves state))))
 
 (defmacro with-timeout [n & body]
   `(let [future# (future ~@body)
