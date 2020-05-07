@@ -1,14 +1,39 @@
 # box-solver
 
-A Clojure library designed to ... well, that part is up to you.
+Clojure breadth-first search of iOS Boxed-In game.
 
 ## Usage
 
-FIXME
+CLI Usage:
+```
+Boxed-in solver (corona v1.0)
+Options:
+  -t, --timeout TIMEOUT  nil  Execution timeout in milliseconds (0-1099511627776)
+  -l, --level LEVEL      1    Which level number to solve (1-150)
+  -h, --help
+```
+
+## Example
+
+```
+$ lein trampoline run --level 5
+solving level 5 with no millisecond timeout.
+xxxxxxxxx
+x R x   x
+x@x ++  x
+xx*   + x
+'xxxGxxpx
+'xg * + x
+'xr     x
+'xxxxxxxx
+"Elapsed time: 1689.374703 msecs"
+[:down :left :down :left :left :up :down :right :right :up :left :left :left :right :up :up :right :up :down :left :left :up :right :right :right :up :right :down :down :left :left :up :left :down :down :down :right :down :left :left :up :right :up :up :left :left :right :up :up :left :left :down]
+52 steps
+```
 
 ## License
 
-Copyright © 2020 FIXME
+Copyright © 2020 David Lynch
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at

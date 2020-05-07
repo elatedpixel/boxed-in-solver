@@ -33,6 +33,7 @@
     [data (-> (clojure.java.io/resource "Levels.txt")
               (slurp)
               (clojure.string/split #","))]
+
   (def levels
     (->> data
          (map #(or (re-matches level-regex %) %))

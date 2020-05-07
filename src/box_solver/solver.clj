@@ -104,4 +104,3 @@
       (println (count (:steps solution)) "steps")
       (println)
       solution)))
-
