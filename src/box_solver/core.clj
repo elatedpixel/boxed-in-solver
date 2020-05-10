@@ -12,7 +12,7 @@
    ["-l" "--level LEVEL" "Which level number to solve (1-150)"
     :default 1
     :parse-fn #(Integer/parseInt %)
-    :validate [#(< 0 % 151) "Must be a number between 1 and 150"]]
+    :validate [#(< 0 % 152) "Must be a number between 1 and 150"]]
    ["-h" "--help"]])
 
 (defn -main [& args]
