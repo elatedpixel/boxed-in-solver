@@ -77,8 +77,7 @@
   (keep (partial move state) (keys direction)))
 
 (defn solve [state]
-  (first (drop-while (complement won?)
-                     (bfs next-moves state))))
+  (some #(when (won? %) %) (bfs next-moves state)))
 
 (defmacro with-timeout [n & body]
   `(let [future# (future ~@body)
