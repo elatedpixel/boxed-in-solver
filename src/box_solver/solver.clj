@@ -60,7 +60,7 @@
               (assoc :robot (target d state))
               (update :steps conj d)))))))
 
-(defn seq-graph [data-structure children-fn initial-state]
+(defn bfs [children-fn initial-state]
   ((fn walk [explored frontier]
      (lazy-seq
       (when (seq frontier)
@@ -68,10 +68,8 @@
               children (children-fn state)]
           (cons state
                 (walk (into explored (map :hash children))
-                      (into (pop frontier) (remove #(explored (:hash %)) children))))))))
-   #{(:hash initial-state)} (conj data-structure initial-state)))
-
-(def bfs (partial seq-graph clojure.lang.PersistentQueue/EMPTY))
+                      (into (pop frontier) (remove (comp explored :hash) children))))))))
+   #{(:hash initial-state)} (conj clojure.lang.PersistentQueue/EMPTY initial-state)))
 
 (defn next-moves [state]
   (keep (partial move state) (keys direction)))
@@ -91,7 +89,9 @@
         solution (if (nil? timeout)
                    (solve (d/make-state level))
                    (with-timeout timeout (solve (d/make-state level))))]
-    solution))
+    (do
+      (shutdown-agents)
+      solution)))
 
 (defn print-solver [{:keys [timeout level]}]
   (do
