@@ -74,8 +74,21 @@
 (defn next-moves [state]
   (keep (partial move state) (keys direction)))
 
+(defn all-mins [f]
+  (fn
+    ([] [])
+    ([acc] acc)
+    ([acc state]
+     (if (or (zero? (f acc))
+             (= (count (f state)) (f acc)))
+       (-> acc
+           (assoc :steps (count (f state)))
+           (update :values conj state))
+       (reduced acc)))))
+
 (defn solve [state]
-  (some #(when (won? %) %) (bfs next-moves state)))
+  (transduce (comp (filter won?)) (all-mins :steps) {:steps 0 :values []} (bfs next-moves state))
+  #_(some #(when (won? %) %) (bfs next-moves state)))
 
 (defmacro with-timeout [n & body]
   `(let [future# (future ~@body)
@@ -100,6 +113,7 @@
     (d/display (d/levels level))
     (let [solution (time (solver level :timeout timeout))]
       (println (:steps solution))
-      (println (count (:steps solution)) "steps")
+      (println (count (:values solution)) "solutions found.")
+      #_(println (count (:steps solution)) "steps")
       (println)
       solution)))
