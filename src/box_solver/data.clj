@@ -36,10 +36,11 @@
 
   (def levels
     (->> data
-         (map #(or (re-matches level-regex %) %))
-         (map rest)
-         (map (fn [[width height level]]
-            {:width  (Integer/parseInt width)
-             :height (Integer/parseInt height)
-             :level  level}))
+         (map (comp
+               (fn [[width height level]]
+                 {:width  (Integer/parseInt width)
+                  :height (Integer/parseInt height)
+                  :level  level})
+               rest
+               #(or (re-matches level-regex %) %)))
          (zipmap (rest (range))))))

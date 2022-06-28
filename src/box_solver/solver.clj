@@ -1,5 +1,7 @@
 (ns box-solver.solver
-  (:require [box-solver.data :as d]))
+  (:require [box-solver.data :as d]
+            [clojure.core.async :as async])
+  (:use [clojure.pprint :only (pprint)]))
 
 (def switch
   (zipmap "rbgy" "RBGY"))
@@ -87,8 +89,19 @@
        (reduced acc)))))
 
 (defn solve [state]
-  (transduce (comp (filter won?)) (all-mins :steps) {:steps 0 :values []} (bfs next-moves state))
-  #_(some #(when (won? %) %) (bfs next-moves state)))
+  #_(transduce
+   (comp (filter won?))
+   (all-mins :steps)
+   {:steps 0 :values []}
+   (bfs next-moves state))
+  #_(-> (split-with (complement won?) (bfs next-moves state))
+      ((fn [[l w]] {:wins (count w) :losses (count l)})))
+  (some #(when (won? %) %) (bfs next-moves state)))
+
+(defmacro wait [n & body]
+  `(async/alts!!
+    [(async/timeout ~n)
+     (async/go ~@body)]))
 
 (defmacro with-timeout [n & body]
   `(let [future# (future ~@body)
@@ -101,7 +114,7 @@
   (let [level    (d/levels n)
         solution (if (nil? timeout)
                    (solve (d/make-state level))
-                   (with-timeout timeout (solve (d/make-state level))))]
+                   (wait timeout (solve (d/make-state level))))]
     (do
       (shutdown-agents)
       solution)))
@@ -112,8 +125,9 @@
     (println "solving level" level "with" (or timeout "no") "millisecond timeout.")
     (d/display (d/levels level))
     (let [solution (time (solver level :timeout timeout))]
-      (println (:steps solution))
-      (println (count (:values solution)) "solutions found.")
-      #_(println (count (:steps solution)) "steps")
+      ;; (println (:steps solution))
+      ;; (println (count (:values solution)) "solutions found.")
+      ;; (println (count (:steps solution)) "steps")
+      (pprint solution)
       (println)
       solution)))
